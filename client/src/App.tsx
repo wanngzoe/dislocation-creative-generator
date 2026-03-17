@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { CreativeInput, Creative, GenerateResponse } from './types'
-import { DISLOCATION_TYPES, TARGET_USER_PRESETS, INDUSTRY_PRESETS } from './constants'
+import { CreativeInput, Creative } from './types'
+import { DISLOCATION_TYPES, TARGET_USER_PRESETS } from './constants'
 
 function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '')
@@ -26,6 +26,26 @@ function App() {
     setShowSettings(false)
   }
 
+  const getPrompt = (input: CreativeInput) => {
+    const { targetUser, dislocationType, description, reference, count } = input
+    return `为短剧广告生成恰好${count}条错位素材创意。
+
+目标受众：${targetUser}
+错位类型：${dislocationType}
+核心内容：${description}
+${reference ? `参考风格：${reference}` : ''}
+
+要求：
+1. 专为短剧引流广告设计，激发用户点击观看欲望
+2. 利用${dislocationType}制造强烈反差和悬念
+3. 画面描述：50-80字，适合5-15秒短视频，要有画面感、有人物状态和情绪
+4. 旁白文案：10-20字，口语化、有情绪、能引发好奇
+5. 开头要有吸引力，能抓住眼球
+
+返回JSON数组：
+[{"scene":"画面描述","narration":"旁白文案"}]`
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -36,7 +56,7 @@ function App() {
 
     setLoading(true)
     setError('')
-    setCreatatives([])
+    setCreatives([])
 
     try {
       const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=' + apiKey, {
@@ -56,7 +76,6 @@ function App() {
       const data = await response.json()
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
-      // 调试模式：保存信息
       if (debugMode) {
         setDebugInfo({
           prompt: getPrompt(input),
@@ -64,7 +83,6 @@ function App() {
         })
       }
 
-      // 解析 JSON
       const jsonMatch = content.match(/\[[\s\S]*\]/)
       if (!jsonMatch) throw new Error('无法解析结果')
 
@@ -79,26 +97,6 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const getPrompt = (input: CreativeInput) => {
-    const { targetUser, dislocationType, description, reference, count } = input
-    return `为短剧广告生成恰好${count}条错位素材创意。
-
-目标受众：${targetUser}
-错位类型：${dislocationType}
-核心内容：${description}
-${reference ? `参考风格：${reference}` : ''}
-
-要求：
-1. 专为短剧引流广告设计，激发用户点击观看欲望
-2. 利用${dislocationType}制造强烈反差和悬念
-3. 画面描述：50-80字，适合5-15秒短视频，要有画面感、有人物状态和情绪
-4. 旁白文案：10-20字，口语化、有情绪、能引发好奇
-5. 开头要有吸引力，能抓住眼球
-
-返回JSON数组：
-[{"scene":"画面描述","narration":"旁白文案"}]`
   }
 
   const copyToClipboard = (text: string) => {
