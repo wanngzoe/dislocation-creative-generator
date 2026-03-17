@@ -407,3 +407,44 @@ body {
   display: flex;
   gap: 1rem;
 }
+
+.debug-panel {
+  margin-top: 2rem;
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 1rem;
+  color: #d4d4d4;
+}
+
+.debug-panel h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.debug-section {
+  margin-bottom: 1rem;
+}
+
+.debug-section h4 {
+  color: #9cdcfe;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.debug-section pre {
+  background: #2d2d2d;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.btn-icon.active {
+  color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}

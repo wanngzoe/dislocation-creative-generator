@@ -17,6 +17,8 @@ function App() {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [showSettings, setShowSettings] = useState(!apiKey)
+  const [debugMode, setDebugMode] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<{ prompt: string; response: string } | null>(null)
 
   const saveApiKey = (key: string) => {
     setApiKey(key)
@@ -53,6 +55,14 @@ function App() {
 
       const data = await response.json()
       const content = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+      // 调试模式：保存信息
+      if (debugMode) {
+        setDebugInfo({
+          prompt: getPrompt(input),
+          response: JSON.stringify(data, null, 2)
+        })
+      }
 
       // 解析 JSON
       const jsonMatch = content.match(/\[[\s\S]*\]/)
@@ -109,12 +119,24 @@ ${reference ? `参考风格：${reference}` : ''}
             <h1>错位创意生成器</h1>
             <p>短剧素材创意生成工具 - 为广告优化师打造</p>
           </div>
-          <button className="btn-icon" onClick={() => setShowSettings(true)} title="API 设置">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className={`btn-icon ${debugMode ? 'active' : ''}`}
+              onClick={() => { setDebugMode(!debugMode); setDebugInfo(null) }}
+              title="调试模式"
+              style={{ color: debugMode ? 'var(--primary)' : undefined }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+              </svg>
+            </button>
+            <button className="btn-icon" onClick={() => setShowSettings(true)} title="API 设置">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -248,6 +270,20 @@ ${reference ? `参考风格：${reference}` : ''}
               </svg>
               <p>填写左侧表单，点击"生成创意"</p>
               <p>AI 将根据错位规则生成原创创意文案</p>
+            </div>
+          )}
+
+          {debugMode && debugInfo && (
+            <div className="debug-panel">
+              <h3>调试信息</h3>
+              <div className="debug-section">
+                <h4>发送的 Prompt</h4>
+                <pre>{debugInfo.prompt}</pre>
+              </div>
+              <div className="debug-section">
+                <h4>API 原始响应</h4>
+                <pre>{debugInfo.response}</pre>
+              </div>
             </div>
           )}
         </section>
