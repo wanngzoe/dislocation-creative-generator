@@ -27,7 +27,8 @@ function App() {
   }
 
   const getPrompt = (input: CreativeInput) => {
-    const { targetUser, dislocationType, description, reference, count } = input
+    const { targetUser, dislocationType, description, reference } = input
+    const count = input.count
     return `你是一位短剧广告引流素材创意大师，结合传播学与心理学知识，生成高点击率、高转化率的创意内容。
 
 ## 基础信息
