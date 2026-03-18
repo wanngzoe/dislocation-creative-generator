@@ -109,10 +109,14 @@ ${reference ? `参考风格：${reference}` : ''}
    - 有人物、场景、动作
    - 开头抓眼球，有冲突/悬念/反转
    - 口语化、有情绪、能引发好奇
-5. 过渡要自然：让用户想知道"然后呢？"
+5. 素材画面：20-30字，简洁展示短剧/产品内容
+6. 素材旁白：10-15字，点明核心卖点
+7. 过渡：5-10字，如"点击看完整版"
+
+重要：只输出JSON数组，不要任何解释文字！
 
 返回JSON数组：
-[{"hookScene":"钩子画面描述","hookNarration":"钩子旁白文案","materialScene":"素材画面描述","materialNarration":"素材旁白文案","transition":"过渡引导（如：点击看完整版）"}]`
+[{"hookScene":"画面描述","hookNarration":"旁白","materialScene":"画面描述","materialNarration":"旁白","transition":"过渡"}]`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
