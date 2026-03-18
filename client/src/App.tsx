@@ -7,7 +7,8 @@ function App() {
   const [input, setInput] = useState<CreativeInput>({
     targetUser: '',
     dislocationType: '',
-    description: '',
+    hook: '',
+    material: '',
     reference: '',
     industry: '短剧',
     count: 5,
@@ -27,14 +28,15 @@ function App() {
   }
 
   const getPrompt = (input: CreativeInput) => {
-    const { targetUser, dislocationType, description, reference } = input
+    const { targetUser, dislocationType, hook, material, reference } = input
     const count = input.count
-    return `生成恰好${count}条短剧广告引流素材创意，结合传播学、心理学与爆款案例，生成高点击率、高转化率的创意内容。
+    return `生成恰好${count}条短剧广告引流素材创意，包含"钩子+素材+过渡"，结合传播学、心理学与爆款案例，生成高点击率、高转化率的创意内容。
 
 ## 基础信息
 目标受众：${targetUser}
 错位类型：${dislocationType}
-核心内容：${description}
+钩子创意（吸引点击）：${hook}
+目标素材（需要衔接的内容）：${material}
 ${reference ? `参考风格：${reference}` : ''}
 
 ## 错位维度体系（20种）
@@ -95,20 +97,22 @@ ${reference ? `参考风格：${reference}` : ''}
 
 ## 创意要求
 
-1. 专为短剧引流广告设计，目标：让用户点击进入短剧
-2. 利用${dislocationType}制造强烈认知反差
-3. 画面描述：50-80字，适合5-15秒短视频
+1. 每条创意包含三部分：
+   - 钩子画面+钩子旁白：吸引眼球，让人想点击
+   - 素材画面+素材旁白：要推广的具体内容
+   - 过渡文案：说明"点击看完整"或"后续更精彩"
+
+2. 专为短剧引流广告设计，目标：让用户点击进入短剧
+3. 利用${dislocationType}制造强烈认知反差
+4. 钩子部分：50-80字，适合5-15秒短视频开头
    - 简洁有力，一句话脑补画面
    - 有人物、场景、动作
-   - 开头抓眼球，有冲突/悬念
-4. 旁白文案：10-20字
+   - 开头抓眼球，有冲突/悬念/反转
    - 口语化、有情绪、能引发好奇
-   - 有反转/槽点/金句感
-   - 引导点击去看完整短剧
-5. 每条创意都要有"钩子"，让人想看后续
+5. 过渡要自然：让用户想知道"然后呢？"
 
 返回JSON数组：
-[{"scene":"画面描述","narration":"旁白文案"}]`
+[{"hookScene":"钩子画面描述","hookNarration":"钩子旁白文案","materialScene":"素材画面描述","materialNarration":"素材旁白文案","transition":"过渡引导（如：点击看完整版）"}]`
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,8 +164,11 @@ ${reference ? `参考风格：${reference}` : ''}
       const parsed = JSON.parse(jsonMatch[0])
       setCreatives(parsed.map((item: any, index: number) => ({
         id: `creative-${Date.now()}-${index}`,
-        sceneDescription: item.scene || item.sceneDescription || '',
-        narration: item.narration || '',
+        hookScene: item.hookScene || item.hookScene || '',
+        hookNarration: item.hookNarration || item.hookNarration || '',
+        materialScene: item.materialScene || item.materialScene || '',
+        materialNarration: item.materialNarration || item.materialNarration || '',
+        transition: item.transition || '',
       })))
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '生成失败，请重试'
@@ -183,7 +190,15 @@ ${reference ? `参考风格：${reference}` : ''}
   }
 
   const formatCreative = (creative: Creative) => {
-    return `画面描述：${creative.sceneDescription}\n旁白文案：${creative.narration}`
+    return `【钩子】
+画面：${creative.hookScene}
+旁白：${creative.hookNarration}
+
+【素材】
+画面：${creative.materialScene}
+旁白：${creative.materialNarration}
+
+【过渡】${creative.transition}`
   }
 
   return (
@@ -261,12 +276,24 @@ ${reference ? `参考风格：${reference}` : ''}
 
           <div className="form-group">
             <label>
-              素材描述/故事梗概 <span className="required">*</span>
+              钩子创意（用于吸引点击） <span className="required">*</span>
             </label>
             <textarea
-              value={input.description}
-              onChange={(e) => setInput({ ...input, description: e.target.value })}
-              placeholder="例如：一个程序员转型做早餐店 / 老年人学年轻人穿搭"
+              value={input.hook}
+              onChange={(e) => setInput({ ...input, hook: e.target.value })}
+              placeholder="例如：反差极大的有趣场景 / 悬念开头 / 让人好奇的后续"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>
+              目标素材（需要衔接的内容） <span className="required">*</span>
+            </label>
+            <textarea
+              value={input.material}
+              onChange={(e) => setInput({ ...input, material: e.target.value })}
+              placeholder="例如：短剧《霸道总裁爱上我》/ 某产品/服务"
               required
             />
           </div>
@@ -317,13 +344,23 @@ ${reference ? `参考风格：${reference}` : ''}
               <div className="creatives-grid">
                 {creatives.map((creative, index) => (
                   <div key={creative.id} className="creative-card">
+                    <div className="section-title">🎣 钩子（吸引点击）</div>
                     <div className="scene-label">
                       <span className="index">{index + 1}</span>
-                      画面描述
+                      钩子画面
                     </div>
-                    <p className="scene-description">{creative.sceneDescription}</p>
-                    <p className="narration-label">旁白文案</p>
-                    <p className="narration">{creative.narration}</p>
+                    <p className="scene-description">{creative.hookScene}</p>
+                    <p className="narration-label">钩子旁白</p>
+                    <p className="narration">{creative.hookNarration}</p>
+
+                    <div className="section-title">📦 素材（目标内容）</div>
+                    <p className="scene-description">{creative.materialScene}</p>
+                    <p className="narration-label">素材旁白</p>
+                    <p className="narration">{creative.materialNarration}</p>
+
+                    <div className="section-title">➡️ 过渡引导</div>
+                    <p className="transition-text">{creative.transition}</p>
+
                     <div className="actions">
                       <button
                         className="btn btn-secondary"

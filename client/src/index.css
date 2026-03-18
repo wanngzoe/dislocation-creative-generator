@@ -448,3 +448,23 @@ body {
   color: var(--primary);
   background: rgba(99, 102, 241, 0.1);
 }
+
+.section-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 1rem 0 0.5rem 0;
+  color: var(--text);
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.transition-text {
+  color: var(--primary);
+  font-weight: 500;
+  padding: 0.5rem;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}

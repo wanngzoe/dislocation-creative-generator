@@ -1,7 +1,8 @@
 export interface CreativeInput {
   targetUser: string;
   dislocationType: string;
-  description: string;
+  hook: string;
+  material: string;
   reference?: string;
   industry?: string;
   count: number;
@@ -9,8 +10,11 @@ export interface CreativeInput {
 
 export interface Creative {
   id: string;
-  sceneDescription: string;
-  narration: string;
+  hookScene: string;
+  hookNarration: string;
+  materialScene: string;
+  materialNarration: string;
+  transition: string;
 }
 
 export interface GenerateRequest {
