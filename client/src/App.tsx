@@ -7,7 +7,6 @@ function App() {
   const [input, setInput] = useState<CreativeInput>({
     targetUser: '',
     dislocationType: '',
-    hook: '',
     material: '',
     reference: '',
     industry: '短剧',
@@ -28,15 +27,14 @@ function App() {
   }
 
   const getPrompt = (input: CreativeInput) => {
-    const { targetUser, dislocationType, hook, material, reference } = input
+    const { targetUser, dislocationType, material, reference } = input
     const count = input.count
-    return `生成恰好${count}条短剧广告引流素材创意，包含"钩子+素材+过渡"，结合传播学、心理学与爆款案例，生成高点击率、高转化率的创意内容。
+    return `生成恰好${count}条短剧广告引流素材创意，包含"钩子+素材+过渡"。
 
 ## 基础信息
 目标受众：${targetUser}
 错位类型：${dislocationType}
-钩子创意（吸引点击）：${hook}
-目标素材（需要衔接的内容）：${material}
+目标素材（需要推广的短剧/产品）：${material}
 ${reference ? `参考风格：${reference}` : ''}
 
 ## 错位维度体系（20种）
@@ -98,18 +96,18 @@ ${reference ? `参考风格：${reference}` : ''}
 ## 创意要求
 
 1. 每条创意包含三部分：
-   - 钩子画面+钩子旁白：吸引眼球，让人想点击
-   - 素材画面+素材旁白：要推广的具体内容
-   - 过渡文案：说明"点击看完整"或"后续更精彩"
+   - 钩子（基于错位类型自动生成）：画面+旁白，吸引眼球让人想点击
+   - 素材画面+素材旁白：要推广的具体内容（用户输入的${material}）
+   - 过渡：引导点击
 
 2. 专为短剧引流广告设计，目标：让用户点击进入短剧
-3. 利用${dislocationType}制造强烈认知反差
-4. 钩子部分：50-80字，适合5-15秒短视频开头
+3. 钩子必须基于${dislocationType}生成，制造强烈认知反差
+4. 钩子画面：50-80字，适合5-15秒短视频开头
    - 简洁有力，一句话脑补画面
    - 有人物、场景、动作
    - 开头抓眼球，有冲突/悬念/反转
    - 口语化、有情绪、能引发好奇
-5. 素材画面：20-30字，简洁展示短剧/产品内容
+5. 素材画面：20-30字，展示用户输入的短剧/产品内容
 6. 素材旁白：10-15字，点明核心卖点
 7. 过渡：5-10字，如"点击看完整版"
 
@@ -280,19 +278,7 @@ ${reference ? `参考风格：${reference}` : ''}
 
           <div className="form-group">
             <label>
-              钩子创意（用于吸引点击） <span className="required">*</span>
-            </label>
-            <textarea
-              value={input.hook}
-              onChange={(e) => setInput({ ...input, hook: e.target.value })}
-              placeholder="例如：反差极大的有趣场景 / 悬念开头 / 让人好奇的后续"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>
-              目标素材（需要衔接的内容） <span className="required">*</span>
+              目标素材（需要推广的短剧/产品） <span className="required">*</span>
             </label>
             <textarea
               value={input.material}

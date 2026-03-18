@@ -1,7 +1,6 @@
 export interface CreativeInput {
   targetUser: string;
   dislocationType: string;
-  hook: string;
   material: string;
   reference?: string;
   industry?: string;
