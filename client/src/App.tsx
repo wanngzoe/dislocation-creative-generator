@@ -59,12 +59,12 @@ ${reference ? `参考风格：${reference}` : ''}
     setCreatives([])
 
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=' + apiKey, {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: getPrompt(input) }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 4096 }
+          apiKey,
+          prompt: getPrompt(input)
         }),
       })
 
