@@ -124,6 +124,10 @@ ${reference ? `参考风格：${reference}` : ''}
     setCreatives([])
 
     try {
+      // 添加超时控制
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60秒超时
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,7 +135,9 @@ ${reference ? `参考风格：${reference}` : ''}
           apiKey,
           prompt: getPrompt(input)
         }),
+        signal: controller.signal
       })
+      clearTimeout(timeoutId)
 
       if (!response.ok) {
         const err = await response.json()
@@ -158,7 +164,13 @@ ${reference ? `参考风格：${reference}` : ''}
         narration: item.narration || '',
       })))
     } catch (err) {
-      setError(err instanceof Error ? err.message : '生成失败，请重试')
+      const errorMsg = err instanceof Error ? err.message : '生成失败，请重试'
+      // 如果是网络错误，给出更具体的提示
+      if (errorMsg.includes('Failed to fetch') || errorMsg.includes('network')) {
+        setError('网络连接失败，请检查网络后重试')
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       setLoading(false)
     }
