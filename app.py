@@ -24,14 +24,21 @@ TARGET_USER_PRESETS = [
     "大学生", "职场新人", "中老年人", "游戏玩家"
 ]
 
+# 年代预设
+ERA_PRESETS = [
+    "70年代", "80年代", "90年代", "00年代", "10年代",
+    "民国", "古代", "未来", "不设限"
+]
+
 def get_prompt(input_data):
     target_user = input_data["targetUser"]
     dislocation_type = input_data["dislocationType"]
+    era = input_data.get("era", "不设限")
     material = input_data["material"]
     reference = input_data.get("reference", "")
     count = input_data["count"]
 
-    return f"""生成恰好{count}条短剧广告引流素材创意，包含"钩子+素材+过渡"。
+    return f"""生成恰好{count}条短剧广告引流素材创意，包含"钩子+素材+过渡"，钩子的年代设定为{era}。
 
 ## 基础信息
 目标受众：{target_user}
@@ -68,10 +75,10 @@ def get_prompt(input_data):
 
 ## 创意要求
 
-每条创意包含三部分：
+每条创意包含三部分（年代：{era}）：
 
-1. **钩子（基于错位）**：用{dislocation_type}制造反差
-   - 画面：50-80字，有画面感有人物动作
+1. **钩子（基于错位+年代{era}）**：用{dislocation_type}制造反差，结合{era}年代特色
+   - 画面：50-80字，有画面感有人物动作，体现年代特色
    - 旁白：10-20字，制造悬念让人想点击
 
 2. **过渡**：钩子到素材的自然衔接
@@ -143,6 +150,9 @@ with col1:
     # 错位类型
     dislocation_type = st.selectbox("错位维度 *", [""] + DISLOCATION_TYPES)
 
+    # 年代选择
+    era_option = st.selectbox("年代（用于钩子）", [""] + ERA_PRESETS, help="选择钩子要设定的年代")
+
     # 目标素材 - 改为推广视频的旁白/文案
     material = st.text_area("目标素材（推广视频的旁白/文案） *",
                           placeholder="例如：霸道总裁发现女主是自己失散多年的妹妹，两人经历误会后最终相认")
@@ -172,6 +182,7 @@ if generate_btn:
                 input_data = {
                     "targetUser": target_user,
                     "dislocationType": dislocation_type,
+                    "era": era_option if era_option else "不设限",
                     "material": material,
                     "reference": reference,
                     "count": count
