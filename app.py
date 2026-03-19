@@ -127,13 +127,16 @@ col1, col2 = st.columns([1, 1.5])
 with col1:
     st.subheader("📝 输入信息")
 
-    # 目标用户
-    target_user = st.text_input("目标用户 *", placeholder="例如：18-25岁女性 / 宝爸宝妈 / 打工人")
-    # 快捷选项
-    cols = st.columns(4)
-    for i, preset in enumerate(TARGET_USER_PRESETS):
-        if cols[i % 4].button(preset, key=f"user_{preset}"):
-            target_user = preset
+    # 目标用户 - 用下拉框选择预设，或选择"自定义"后输入
+    target_user_option = st.selectbox("目标用户 *",
+                                     ["自定义"] + TARGET_USER_PRESETS,
+                                     index=0,
+                                     help="从预设中选择或选择自定义")
+
+    if target_user_option == "自定义":
+        target_user = st.text_input("请输入目标用户", placeholder="例如：18-25岁女性 / 宝爸宝妈 / 打工人")
+    else:
+        target_user = target_user_option
 
     # 错位类型
     dislocation_type = st.selectbox("错位维度 *", [""] + DISLOCATION_TYPES)
