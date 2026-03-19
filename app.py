@@ -34,11 +34,13 @@ def get_prompt(input_data):
     target_user = input_data["targetUser"]
     dislocation_type = input_data["dislocationType"]
     era = input_data.get("era", "不设限")
-    material = input_data["material"]
+    material = input_data.get("material", "")
     reference = input_data.get("reference", "")
     count = input_data["count"]
 
-    return f"""生成恰好{count}条短剧广告引流素材创意。
+    if material:
+        # 用户填写了素材，生成"钩子+过渡+素材"结构
+        return f"""生成恰好{count}条短剧广告引流素材创意。
 
 ## 要求
 - 目标受众：{target_user}
@@ -53,6 +55,24 @@ def get_prompt(input_data):
     "hookNarration": "钩子旁白（10-20字）",
     "transition": "过渡（5-10字）",
     "materialNarration": "素材旁白（直接使用：{material}）"
+  }}
+]
+
+重要：只输出JSON数组，前面不要有任何文字！"""
+    else:
+        # 用户没有填写素材，自由发挥生成创意
+        return f"""生成恰好{count}条短剧广告引流素材创意。
+
+## 要求
+- 目标受众：{target_user}
+- 错位类型：{dislocation_type}
+- 年代：{era}
+
+## 输出格式（严格JSON，不要其他内容）
+[
+  {{
+    "hookScene": "钩子画面描述（50-80字）",
+    "hookNarration": "钩子旁白（10-20字）"
   }}
 ]
 
@@ -115,9 +135,9 @@ with col1:
     # 年代选择
     era_option = st.selectbox("年代（用于钩子）", [""] + ERA_PRESETS, help="选择钩子要设定的年代")
 
-    # 目标素材 - 改为推广视频的旁白/文案
-    material = st.text_area("目标素材（推广视频的旁白/文案） *",
-                          placeholder="例如：霸道总裁发现女主是自己失散多年的妹妹，两人经历误会后最终相认")
+    # 目标素材（可选）
+    material = st.text_area("目标素材（推广视频的旁白/文案）",
+                          placeholder="不填写=自由发挥；填写=根据内容生成钩子+过渡+素材")
 
     # 参考创意（可选）
     reference = st.text_input("参考创意（可选）", placeholder="例如：类似XXX那种反差感")
@@ -136,8 +156,6 @@ if generate_btn:
         st.error("请输入目标用户")
     elif not dislocation_type:
         st.error("请选择错位维度")
-    elif not material:
-        st.error("请输入目标素材")
     else:
         with st.spinner("创意生成中..."):
             try:
@@ -159,6 +177,7 @@ if generate_btn:
 
                 if creatives:
                     st.session_state["creatives"] = creatives
+                    st.session_state["has_material"] = bool(material)
                     st.session_state["last_prompt"] = prompt
                     st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
                 else:
@@ -169,8 +188,10 @@ if generate_btn:
 
 # 显示结果
 if "creatives" in st.session_state:
+    has_material = st.session_state.get("has_material", False)
+
     with col2:
-        st.subheader(f"📋 生成的创意 ({len(st.session_state['creatives'])}条)")
+        st.subheader(f"📋 生成的创意 ({len(st.session_state['creatives'])}条)" + (" - 自由发挥" if not has_material else ""))
 
         for i, creative in enumerate(st.session_state["creatives"]):
             with st.expander(f"创意 {i+1}", expanded=True):
@@ -179,16 +200,19 @@ if "creatives" in st.session_state:
                 st.markdown(f"**画面：** {creative.get('hookScene', '')}")
                 st.markdown(f"**旁白：** {creative.get('hookNarration', '')}")
 
-                # 过渡
-                st.markdown("### ➡️ 过渡（钩子→素材）")
-                st.info(creative.get('transition', ''))
+                # 如果有素材，显示过渡和素材
+                if has_material:
+                    # 过渡
+                    st.markdown("### ➡️ 过渡（钩子→素材）")
+                    st.info(creative.get('transition', ''))
 
-                # 素材
-                st.markdown("### 📦 素材（用户输入的内容）")
-                st.markdown(f"**旁白：** {creative.get('materialNarration', '')}")
+                    # 素材
+                    st.markdown("### 📦 素材（用户输入的内容）")
+                    st.markdown(f"**旁白：** {creative.get('materialNarration', '')}")
 
                 # 复制按钮
-                copy_text = f"""【钩子 - 基于错位】
+                if has_material:
+                    copy_text = f"""【钩子 - 基于错位】
 画面：{creative.get('hookScene', '')}
 旁白：{creative.get('hookNarration', '')}
 
@@ -197,6 +221,10 @@ if "creatives" in st.session_state:
 
 【素材 - 用户输入的推广内容】
 旁白：{creative.get('materialNarration', '')}"""
+                else:
+                    copy_text = f"""【钩子 - 基于错位】
+画面：{creative.get('hookScene', '')}
+旁白：{creative.get('hookNarration', '')}"""
 
                 st.code(copy_text, language=None)
 
