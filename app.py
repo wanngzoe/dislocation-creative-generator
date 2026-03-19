@@ -67,20 +67,22 @@ def get_prompt(input_data):
 - 认知反差：错位越明显冲击力越强，制造"这不可能但又发生了"的感觉
 
 ## 创意要求
-1. 每条创意包含三部分：
-   - 钩子（基于错位类型自动生成)：画面+旁白，吸引眼球让人想点击
-   - 素材画面+素材旁白：要推广的具体内容
-   - 过渡：引导点击
 
-2. 钩子必须基于{dislocation_type}生成，制造强烈认知反差
-3. 钩子画面：50-80字，适合5-15秒短视频开头
-   - 简洁有力，一句话脑补画面
-   - 有人物、场景、动作
-   - 开头抓眼球，有冲突/悬念/反转
-   - 口语化、有情绪、能引发好奇
-4. 素材画面：20-30字，展示用户输入的短剧/产品内容
-5. 素材旁白：10-15字，点明核心卖点
-6. 过渡：5-10字，如"点击看完整版"
+每条创意包含三部分：
+
+1. **钩子（基于错位）**：用{dislocation_type}制造反差
+   - 画面：50-80字，有画面感有人物动作
+   - 旁白：10-20字，制造悬念让人想点击
+
+2. **过渡**：钩子到素材的自然衔接
+   - 可以是过渡镜头描述，或衔接文案
+   - 让观众从钩子自然过渡到素材
+
+3. **素材**：用户输入的推广视频内容
+   - 直接使用用户提供的旁白/文案
+   - 展示核心卖点
+
+整体节奏：钩子 → 过渡 → 素材 → 引导点击
 
 重要：只输出JSON数组，不要任何解释文字！
 
@@ -141,8 +143,9 @@ with col1:
     # 错位类型
     dislocation_type = st.selectbox("错位维度 *", [""] + DISLOCATION_TYPES)
 
-    # 目标素材
-    material = st.text_area("目标素材（需要推广的短剧/产品） *", placeholder="例如：短剧《霸道总裁爱上我》 / 某产品/服务")
+    # 目标素材 - 改为推广视频的旁白/文案
+    material = st.text_area("目标素材（推广视频的旁白/文案） *",
+                          placeholder="例如：霸道总裁发现女主是自己失散多年的妹妹，两人经历误会后最终相认")
 
     # 参考创意（可选）
     reference = st.text_input("参考创意（可选）", placeholder="例如：类似XXX那种反差感")
@@ -198,27 +201,29 @@ if "creatives" in st.session_state:
 
         for i, creative in enumerate(st.session_state["creatives"]):
             with st.expander(f"创意 {i+1}", expanded=True):
-                st.markdown("### 🎣 钩子（吸引点击）")
+                # 钩子
+                st.markdown("### 🎣 钩子（基于错位）")
                 st.markdown(f"**画面：** {creative.get('hookScene', '')}")
                 st.markdown(f"**旁白：** {creative.get('hookNarration', '')}")
 
-                st.markdown("### 📦 素材（目标内容）")
-                st.markdown(f"**画面：** {creative.get('materialScene', '')}")
+                # 过渡
+                st.markdown("### ➡️ 过渡（钩子→素材）")
+                st.info(creative.get('transition', ''))
+
+                # 素材
+                st.markdown("### 📦 素材（用户输入的内容）")
                 st.markdown(f"**旁白：** {creative.get('materialNarration', '')}")
 
-                st.markdown("### ➡️ 过渡引导")
-                st.success(creative.get('transition', ''))
-
                 # 复制按钮
-                copy_text = f"""【钩子】
+                copy_text = f"""【钩子 - 基于错位】
 画面：{creative.get('hookScene', '')}
 旁白：{creative.get('hookNarration', '')}
 
-【素材】
-画面：{creative.get('materialScene', '')}
-旁白：{creative.get('materialNarration', '')}
+【过渡 - 衔接钩子和素材】
+{creative.get('transition', '')}
 
-【过渡】{creative.get('transition', '')}"""
+【素材 - 用户输入的推广内容】
+旁白：{creative.get('materialNarration', '')}"""
 
                 st.code(copy_text, language=None)
 
