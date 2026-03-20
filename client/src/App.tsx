@@ -19,6 +19,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(!apiKey)
   const [debugMode, setDebugMode] = useState(false)
   const [debugInfo, setDebugInfo] = useState<{ prompt: string; response: string } | null>(null)
+  const [hasMaterial, setHasMaterial] = useState(false)
 
   const saveApiKey = (key: string) => {
     setApiKey(key)
@@ -29,7 +30,10 @@ function App() {
   const getPrompt = (input: CreativeInput) => {
     const { targetUser, dislocationType, material, reference } = input
     const count = input.count
-    return `生成恰好${count}条短剧广告引流素材创意，包含"钩子+素材+过渡"。
+
+    if (material) {
+      // 用户填写了素材，生成"钩子+过渡+素材"结构
+      return `生成恰好${count}条短剧广告引流素材创意，包含"钩子+素材+过渡"。
 
 ## 基础信息
 目标受众：${targetUser}
@@ -115,6 +119,86 @@ ${reference ? `参考风格：${reference}` : ''}
 
 返回JSON数组：
 [{"hookScene":"画面描述","hookNarration":"旁白","materialScene":"画面描述","materialNarration":"旁白","transition":"过渡"}]`
+    } else {
+      // 用户没有填写素材，自由发挥生成创意
+      return `生成恰好${count}条短剧广告引流素材创意。
+
+## 基础信息
+目标受众：${targetUser}
+错位类型：${dislocationType}
+${reference ? `参考风格：${reference}` : ''}
+
+## 错位维度体系（20种）
+1. 职业错位 - 不同职业之间的反差（如程序员在手术室写代码）
+2. 年龄错位 - 不同年龄段之间的反差（如小孩签合同、老人扣篮）
+3. 性别错位 - 性别角色的反差（如男性美甲师、女性搬砖）
+4. 时代错位 - 不同时代的反差（如古人用智能手机）
+5. 物种错位 - 人与动物的反差（如猫当老板、熊猫打螺丝）
+6. 场景错位 - 不同场景的反差（如潜水员在沙漠、消防员在雪山）
+7. 材质/形态错位 - 材质或形态的反差（如人变成红绿灯、沙发成精）
+8. 语言/文化错位 - 语言或文化的反差（如老外说相声）
+9. 关系错位 - 不同关系的反差（如父亲给女儿当伴娘）
+10. 声音/语言错位 - 声音或语言的反差（如糙汉子声音却是萌妹子）
+11. 身份/阶层错位 - 身份或阶层的反差（如流浪汉穿高定、富豪吃烤串）
+12. 比例/尺度错位 - 比例或尺度的反差（如巨人玩蚂蚁、头变成篮球大小）
+13. 状态/情绪错位 - 状态或情绪的反差（如葬礼载歌载舞、中奖反而哭）
+14. 季节/温度错位 - 季节或温度的反差（如夏天穿羽绒服堆雪人）
+15. 风格/艺术错位 - 风格或艺术的反差（如兵马俑穿JK）
+16. 虚拟与现实错位 - 虚拟与现实的反差（如NPC送外卖）
+17. 职业与技能错位 - 职业与技能的反差（如rapper念政府工作报告）
+18. 因果错位 - 因果关系的反差（如吃方便面住别墅）
+19. 数字/数据错位 - 数字或数据的反差（如100岁过1岁生日）
+20. 组合错位 - 多维度叠加的反差（如古代皇帝用手机治国）
+
+## 传播学与心理学核心技巧
+
+### 1. 注意力捕获
+- 开头必须抓眼球：用异常画面、冲突台词、悬念
+- 利用"认知缺口"：让用户想知道"后续发生了什么"
+- 祖母法则：先说结果/好处
+
+### 2. 情绪共鸣
+- 激发情绪：好奇、惊讶、愤怒、焦虑、羡慕、爽感
+- 利用"损失厌恶"：错过就没了、仅限今天
+- 利用"社会认同"：大家都在看
+
+### 3. 认知反差
+- 错位越明显，冲击力越强
+- 制造"这不可能但又发生了"的感觉
+- 但要合理可执行，AI能呈现
+
+### 4. 行动号召
+- 旁白口语化、接地气
+
+## 创意参考风格（来自爆款案例）
+
+优秀案例特点：
+- 画面描述简洁有力，一句话就能脑补画面
+- 旁白文案10-20字，是点睛之笔
+- 有反转/槽点/金句，让人印象深刻
+- 能激发情绪反应
+
+示例：
+- "穿白大褂的程序员在写代码，背景是手术室" → "这代码，是救命的还是致病的？"
+- "老人在篮球场扣篮，身穿高中生校服" → "谁还没年轻过？但这也太能了"
+- "小孩在办公桌前签合同，旁边堆满文件" → "这届小孩，活得比大人还累"
+
+## 创意要求
+
+1. 每条创意只包含钩子：画面+旁白，吸引眼球让人想点击
+2. 专为短剧引流广告设计
+3. 钩子必须基于${dislocationType}生成，制造强烈认知反差
+4. 钩子画面：50-80字，适合5-15秒短视频开头
+   - 简洁有力，一句话脑补画面
+   - 有人物、场景、动作
+   - 开头抓眼球，有冲突/悬念/反转
+   - 口语化、有情绪、能引发好奇
+
+重要：只输出JSON数组，不要任何解释文字！
+
+返回JSON数组：
+[{"hookScene":"画面描述","hookNarration":"旁白"}]`
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,6 +248,7 @@ ${reference ? `参考风格：${reference}` : ''}
       if (!jsonMatch) throw new Error('无法解析结果')
 
       const parsed = JSON.parse(jsonMatch[0])
+      setHasMaterial(!!input.material)
       setCreatives(parsed.map((item: any, index: number) => ({
         id: `creative-${Date.now()}-${index}`,
         hookScene: item.hookScene || item.hookScene || '',
@@ -191,8 +276,9 @@ ${reference ? `参考风格：${reference}` : ''}
     setTimeout(() => setToast(''), 2000)
   }
 
-  const formatCreative = (creative: Creative) => {
-    return `【钩子】
+  const formatCreative = (creative: Creative, withMaterial: boolean) => {
+    if (withMaterial) {
+      return `【钩子】
 画面：${creative.hookScene}
 旁白：${creative.hookNarration}
 
@@ -201,6 +287,11 @@ ${reference ? `参考风格：${reference}` : ''}
 旁白：${creative.materialNarration}
 
 【过渡】${creative.transition}`
+    } else {
+      return `【钩子】
+画面：${creative.hookScene}
+旁白：${creative.hookNarration}`
+    }
   }
 
   return (
@@ -278,13 +369,12 @@ ${reference ? `参考风格：${reference}` : ''}
 
           <div className="form-group">
             <label>
-              目标素材（需要推广的短剧/产品） <span className="required">*</span>
+              目标素材（需要推广的短剧/产品）
             </label>
             <textarea
               value={input.material}
               onChange={(e) => setInput({ ...input, material: e.target.value })}
-              placeholder="例如：短剧《霸道总裁爱上我》/ 某产品/服务"
-              required
+              placeholder="不填写=自由发挥；填写=根据内容生成钩子+过渡+素材"
             />
           </div>
 
@@ -329,7 +419,7 @@ ${reference ? `参考风格：${reference}` : ''}
           {!loading && creatives.length > 0 && (
             <>
               <div className="results-header">
-                <h2>生成的创意 ({creatives.length}条)</h2>
+                <h2>生成的创意 ({creatives.length}条){!hasMaterial && " - 自由发挥"}</h2>
               </div>
               <div className="creatives-grid">
                 {creatives.map((creative, index) => (
@@ -343,18 +433,22 @@ ${reference ? `参考风格：${reference}` : ''}
                     <p className="narration-label">钩子旁白</p>
                     <p className="narration">{creative.hookNarration}</p>
 
-                    <div className="section-title">📦 素材（目标内容）</div>
-                    <p className="scene-description">{creative.materialScene}</p>
-                    <p className="narration-label">素材旁白</p>
-                    <p className="narration">{creative.materialNarration}</p>
+                    {hasMaterial && (
+                      <>
+                        <div className="section-title">📦 素材（目标内容）</div>
+                        <p className="scene-description">{creative.materialScene}</p>
+                        <p className="narration-label">素材旁白</p>
+                        <p className="narration">{creative.materialNarration}</p>
 
-                    <div className="section-title">➡️ 过渡引导</div>
-                    <p className="transition-text">{creative.transition}</p>
+                        <div className="section-title">➡️ 过渡引导</div>
+                        <p className="transition-text">{creative.transition}</p>
+                      </>
+                    )}
 
                     <div className="actions">
                       <button
                         className="btn btn-secondary"
-                        onClick={() => copyToClipboard(formatCreative(creative))}
+                        onClick={() => copyToClipboard(formatCreative(creative, hasMaterial))}
                       >
                         复制
                       </button>
