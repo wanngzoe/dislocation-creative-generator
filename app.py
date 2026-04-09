@@ -39,6 +39,34 @@ CONFLICT_ANGLES = [
     "情感操控", "信任崩塌"
 ]
 
+# 模型配置
+MODEL_PRESETS = {
+    "gemini-2.5-pro": {
+        "name": "Gemini 2.5 Pro",
+        "api_key_label": "Google Gemini API Key",
+        "api_key_help": "在 Google AI Studio 获取",
+        "api_key_url": "https://aistudio.google.com/app/apikey"
+    },
+    "MiniMax-2.7": {
+        "name": "MiniMax 2.7",
+        "api_key_label": "MiniMax API Key",
+        "api_key_help": "在 MiniMax开放平台获取",
+        "api_key_url": "https://www.minimax.chat/"
+    },
+    "doubao": {
+        "name": "Doubao (豆包)",
+        "api_key_label": "火山引擎 API Key",
+        "api_key_help": "在火山引擎获取",
+        "api_key_url": "https://console.volcengine.com/"
+    },
+    "qwen": {
+        "name": "Qwen (通义千问)",
+        "api_key_label": "阿里云 API Key",
+        "api_key_help": "在阿里云百炼获取",
+        "api_key_url": "https://bailian.console.aliyun.com/"
+    }
+}
+
 def get_prompt(input_data):
     target_user = input_data["targetUser"]
     dislocation_type = input_data["dislocationType"]
@@ -114,7 +142,21 @@ def get_plot_twist_prompt(story_material, count, duration, requirements):
 
 重要：只输出JSON数组！"""
 
-def call_gemini_api(api_key, prompt):
+def call_api(model, api_key, prompt):
+    """统一API调用函数，根据模型选择不同的端点和格式"""
+
+    if model == "gemini-2.5-pro":
+        return call_gemini(api_key, prompt)
+    elif model == "MiniMax-2.7":
+        return call_minimax(api_key, prompt)
+    elif model == "doubao":
+        return call_doubao(api_key, prompt)
+    elif model == "qwen":
+        return call_qwen(api_key, prompt)
+    else:
+        raise Exception(f"不支持的模型: {model}")
+
+def call_gemini(api_key, prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key={api_key}"
 
     data = {
@@ -152,6 +194,79 @@ def call_gemini_api(api_key, prompt):
     parts = content.get("parts", [])
     if not parts:
         raise Exception("API返回内容为空，请重试")
+
+    return result
+
+def call_minimax(api_key, prompt):
+    """MiniMax API调用"""
+    # MiniMax使用不同的API格式，需要GroupId和Model
+    url = "https://api.minimax.chat/v1/text/chatcompletion_pro2?GroupId=YOUR_GROUP_ID"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "MiniMax-2.7",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.9,
+        "max_tokens": 4096
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    result = response.json()
+
+    if "error" in result:
+        raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
+
+    return result
+
+def call_doubao(api_key, prompt):
+    """豆包API调用"""
+    url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "doubao-2.5-pro",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.9,
+        "max_tokens": 4096
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    result = response.json()
+
+    if "error" in result:
+        raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
+
+    return result
+
+def call_qwen(api_key, prompt):
+    """通义千问API调用"""
+    url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "qwen-plus",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.9,
+        "max_tokens": 4096
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+    result = response.json()
+
+    if "error" in result:
+        raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
 
     return result
 
@@ -217,12 +332,31 @@ st.markdown("短剧素材创意生成工具 - 为广告优化师打造")
 # 侧边栏 - API设置
 with st.sidebar:
     st.header("⚙️ API 设置")
-    api_key = st.text_input("Google Gemini API Key", type="password", help="在 Google AI Studio 获取")
-    assemblyai_key = st.text_input("AssemblyAI API Key（视频转写用）", type="password", help="在 assemblyai.com 获取，免费45分钟")
 
-    if not api_key:
-        st.warning("请输入 Google Gemini API Key")
-        st.markdown("[获取 Gemini API Key](https://aistudio.google.com/app/apikey)")
+    # 模型选择
+    selected_model = st.selectbox(
+        "选择模型",
+        options=list(MODEL_PRESETS.keys()),
+        format_func=lambda x: MODEL_PRESETS[x]["name"],
+        help="选择要使用的AI模型"
+    )
+
+    # 获取当前模型的配置
+    model_config = MODEL_PRESETS[selected_model]
+
+    # 动态API Key输入
+    api_key = st.text_input(
+        model_config["api_key_label"],
+        type="password",
+        help=model_config["api_key_help"]
+    )
+
+    st.markdown(f"[获取 {model_config['name']} API Key]({model_config['api_key_url']})")
+
+    st.divider()
+
+    # AssemblyAI
+    assemblyai_key = st.text_input("AssemblyAI API Key（视频转写用）", type="password", help="在 assemblyai.com 获取，免费45分钟")
 
     if not assemblyai_key:
         st.info("如需视频转写功能，请输入 AssemblyAI API Key")
@@ -335,7 +469,7 @@ if generate_btn:
                 }
 
                 prompt = get_prompt(input_data)
-                result = call_gemini_api(api_key, prompt)
+                result = call_api(selected_model, api_key, prompt)
                 st.session_state["last_prompt"] = prompt
                 st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
@@ -365,7 +499,7 @@ if generate_twist_btn:
         with st.spinner("文案生成中..."):
             try:
                 prompt = get_plot_twist_prompt(story_material, twist_count, duration, requirements)
-                result = call_gemini_api(api_key, prompt)
+                result = call_api(selected_model, api_key, prompt)
                 st.session_state["last_prompt"] = prompt
                 st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
