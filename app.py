@@ -3,9 +3,7 @@ import requests
 import json
 import re
 import os
-import tempfile
-from moviepy.editor import VideoFileClip
-import whisper
+import time
 
 # 页面配置
 st.set_page_config(
@@ -137,17 +135,50 @@ def parse_response(response_text):
             pass
     return None
 
-def extract_audio_from_video(video_path, output_path):
-    """从视频中提取音频"""
-    video = VideoFileClip(video_path)
-    video.audio.write_audiofile(output_path, logger=None)
-    video.close()
+def transcribe_with_assemblyai(audio_data, filename, api_key):
+    """使用AssemblyAI转写音视频"""
+    # 上传文件
+    upload_response = requests.post(
+        "https://api.assemblyai.com/v2/upload",
+        headers={"authorization": api_key},
+        data=audio_data
+    )
 
-def transcribe_audio(audio_path, model_size="base"):
-    """使用Whisper转写音频"""
-    model = whisper.load_model(model_size)
-    result = model.transcribe(audio_path, language="zh")
-    return result["text"]
+    if upload_response.status_code != 200:
+        raise Exception(f"上传失败: {upload_response.text}")
+
+    audio_url = upload_response.json()["upload_url"]
+
+    # 创建转写任务
+    transcript_response = requests.post(
+        "https://api.assemblyai.com/v2/transcript",
+        headers={"authorization": api_key},
+        json={
+            "audio_url": audio_url,
+            "language_code": "zh"
+        }
+    )
+
+    if transcript_response.status_code != 200:
+        raise Exception(f"创建转写任务失败: {transcript_response.text}")
+
+    transcript_id = transcript_response.json()["id"]
+
+    # 轮询等待结果
+    while True:
+        status_response = requests.get(
+            f"https://api.assemblyai.com/v2/transcript/{transcript_id}",
+            headers={"authorization": api_key}
+        )
+
+        status = status_response.json()["status"]
+
+        if status == "completed":
+            return status_response.json()["text"]
+        elif status == "error":
+            raise Exception("转写失败")
+        else:
+            time.sleep(3)
 
 # 标题
 st.title("🎬 错位创意生成器")
@@ -157,10 +188,15 @@ st.markdown("短剧素材创意生成工具 - 为广告优化师打造")
 with st.sidebar:
     st.header("⚙️ API 设置")
     api_key = st.text_input("Google Gemini API Key", type="password", help="在 Google AI Studio 获取")
+    assemblyai_key = st.text_input("AssemblyAI API Key（视频转写用）", type="password", help="在 assemblyai.com 获取，免费45分钟")
 
     if not api_key:
-        st.warning("请输入 API Key")
-        st.markdown("[获取 API Key](https://aistudio.google.com/app/apikey)")
+        st.warning("请输入 Google Gemini API Key")
+        st.markdown("[获取 Gemini API Key](https://aistudio.google.com/app/apikey)")
+
+    if not assemblyai_key:
+        st.info("如需视频转写功能，请输入 AssemblyAI API Key")
+        st.markdown("[获取 AssemblyAI Key](https://www.assemblyai.com/)")
 
 # 模式选择标签
 tab1, tab2 = st.tabs(["🎯 错位创意生成", "🔄 反转剧情文案"])
@@ -213,34 +249,17 @@ with tab2:
         st.markdown("**📹 上传视频（可选）**")
         video_file = st.file_uploader("支持 MP4/AVI/MOV/MKV 格式", type=["mp4", "avi", "mov", "mkv"], key="video_upload")
 
-        if video_file:
-            with st.spinner("视频处理中..."):
-                # 保存视频到临时文件
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_video:
-                    tmp_video.write(video_file.read())
-                    video_path = tmp_video.name
+        if video_file and not assemblyai_key:
+            st.error("请先在侧边栏输入 AssemblyAI API Key")
 
-                # 提取音频
-                audio_path = video_path + '.wav'
+        if video_file and assemblyai_key:
+            with st.spinner("视频上传中..."):
                 try:
-                    extract_audio_from_video(video_path, audio_path)
-                    st.success("✅ 音频提取成功")
-
-                    # 转写
-                    with st.spinner("🔄 语音转文字中（首次使用需下载模型，请耐心等待）..."):
-                        transcribed_text = transcribe_audio(audio_path)
-                        st.success("✅ 转写完成")
-
-                        # 将转写内容填入故事素材
-                        st.session_state["transcribed_text"] = transcribed_text
+                    transcribed_text = transcribe_with_assemblyai(video_file.getvalue(), video_file.name, assemblyai_key)
+                    st.success("✅ 转写完成")
+                    st.session_state["transcribed_text"] = transcribed_text
                 except Exception as e:
                     st.error(f"处理失败: {str(e)}")
-                finally:
-                    # 清理临时文件
-                    if os.path.exists(video_path):
-                        os.remove(video_path)
-                    if os.path.exists(audio_path):
-                        os.remove(audio_path)
 
         # 显示转写结果
         if "transcribed_text" in st.session_state and st.session_state["transcribed_text"]:
