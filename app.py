@@ -30,6 +30,13 @@ ERA_PRESETS = [
     "民国", "古代", "未来", "不设限"
 ]
 
+# 核心冲突角度预设
+CONFLICT_ANGLES = [
+    "至亲背叛", "有能力者冷漠", "后知后觉", "被迫共犯",
+    "系统碾压", "身份互换", "时间循环", "记忆错乱",
+    "情感操控", "信任崩塌"
+]
+
 def get_prompt(input_data):
     target_user = input_data["targetUser"]
     dislocation_type = input_data["dislocationType"]
@@ -78,6 +85,33 @@ def get_prompt(input_data):
 
 重要：只输出JSON数组，前面不要有任何文字！"""
 
+def get_plot_twist_prompt(story_material, count, duration, requirements):
+    return f"""根据素材生成短剧文案。
+
+## 素材
+{story_material}
+
+## 要求
+- 生成{count}条
+- 每条时长：{duration}
+- 附加要求：{requirements}
+
+## 创作方法
+1. 从主人公特质出发，创造故事锚点（如：身体符号/物品符号/空间符号）
+2. 识别核心冲突角度（如：至亲背叛/有能力者冷漠/后知后觉/被迫共犯/系统碾压）
+3. 每条从不同关系切面出发，语气统一
+
+## 输出格式（严格JSON）
+[
+  {{
+    "copy": "文案内容（20-35字，2-3个逗号，结尾5字爆点）",
+    "conflict_angle": "冲突角度",
+    "relationship": "关系切面"
+  }}
+]
+
+重要：只输出JSON数组！"""
+
 def call_gemini_api(api_key, prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key={api_key}"
 
@@ -112,43 +146,72 @@ with st.sidebar:
         st.warning("请输入 API Key")
         st.markdown("[获取 API Key](https://aistudio.google.com/app/apikey)")
 
-# 主界面 - 输入表单
-col1, col2 = st.columns([1, 1.5])
+# 模式选择标签
+tab1, tab2 = st.tabs(["🎯 错位创意生成", "🔄 反转剧情文案"])
 
-with col1:
-    st.subheader("📝 输入信息")
+# 模式1: 错位创意生成
+with tab1:
+    col1_disl, col2_disl = st.columns([1, 1.5])
 
-    # 目标用户 - 用下拉框选择预设，或选择"自定义"后输入
-    target_user_option = st.selectbox("目标用户 *",
-                                     ["自定义"] + TARGET_USER_PRESETS,
-                                     index=0,
-                                     help="从预设中选择或选择自定义")
+    with col1_disl:
+        st.subheader("📝 输入信息")
 
-    if target_user_option == "自定义":
-        target_user = st.text_input("请输入目标用户", placeholder="例如：18-25岁女性 / 宝爸宝妈 / 打工人")
-    else:
-        target_user = target_user_option
+        # 目标用户 - 用下拉框选择预设，或选择"自定义"后输入
+        target_user_option = st.selectbox("目标用户 *",
+                                         ["自定义"] + TARGET_USER_PRESETS,
+                                         index=0,
+                                         help="从预设中选择或选择自定义")
 
-    # 错位类型
-    dislocation_type = st.selectbox("错位维度 *", [""] + DISLOCATION_TYPES)
+        if target_user_option == "自定义":
+            target_user = st.text_input("请输入目标用户", placeholder="例如：18-25岁女性 / 宝爸宝妈 / 打工人")
+        else:
+            target_user = target_user_option
 
-    # 年代选择
-    era_option = st.selectbox("年代（用于钩子）", [""] + ERA_PRESETS, help="选择钩子要设定的年代")
+        # 错位类型
+        dislocation_type = st.selectbox("错位维度 *", [""] + DISLOCATION_TYPES)
 
-    # 目标素材（可选）
-    material = st.text_area("目标素材（推广视频的旁白/文案）",
-                          placeholder="不填写=自由发挥；填写=根据内容生成钩子+过渡+素材")
+        # 年代选择
+        era_option = st.selectbox("年代（用于钩子）", [""] + ERA_PRESETS, help="选择钩子要设定的年代")
 
-    # 参考创意（可选）
-    reference = st.text_input("参考创意（可选）", placeholder="例如：类似XXX那种反差感")
+        # 目标素材（可选）
+        material = st.text_area("目标素材（推广视频的旁白/文案）",
+                              placeholder="不填写=自由发挥；填写=根据内容生成钩子+过渡+素材")
 
-    # 生成数量
-    count = st.number_input("生成数量", min_value=1, max_value=20, value=5)
+        # 参考创意（可选）
+        reference = st.text_input("参考创意（可选）", placeholder="例如：类似XXX那种反差感")
 
-    # 生成按钮
-    generate_btn = st.button("🚀 生成创意", type="primary", disabled=not api_key)
+        # 生成数量
+        count = st.number_input("生成数量", min_value=1, max_value=20, value=5)
 
-# 生成逻辑
+        # 生成按钮
+        generate_btn = st.button("🚀 生成创意", type="primary", disabled=not api_key, key="generate_btn_1")
+
+# 模式2: 反转剧情文案
+with tab2:
+    col1_twist, col2_twist = st.columns([1, 1.5])
+
+    with col1_twist:
+        st.subheader("📝 故事素材")
+
+        # 故事素材
+        story_material = st.text_area("故事素材（人物+关系+极端事件） *",
+                                     placeholder="例如：弟弟是公司CEO，哥哥是建筑工人，两人是亲兄弟",
+                                     height=120)
+
+        # 生成数量
+        twist_count = st.number_input("生成数量", min_value=1, max_value=20, value=10, key="twist_count")
+
+        # 时长选择
+        duration = st.selectbox("时长", ["10秒", "15秒", "30秒", "60秒"], index=0)
+
+        # 附加要求
+        requirements = st.text_input("附加要求（可选）",
+                                    placeholder="例如：第一人称、保留主人公等")
+
+        # 生成按钮
+        generate_twist_btn = st.button("🚀 生成文案", type="primary", disabled=not api_key, key="generate_btn_2")
+
+# 生成逻辑 - 模式1
 if generate_btn:
     if not api_key:
         st.error("请先输入 API Key")
@@ -180,6 +243,34 @@ if generate_btn:
                     st.session_state["has_material"] = bool(material)
                     st.session_state["last_prompt"] = prompt
                     st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
+                    st.session_state["current_mode"] = "dislocation"
+                else:
+                    st.error("无法解析结果，请重试")
+
+            except Exception as e:
+                st.error(f"调用失败: {str(e)}")
+
+# 生成逻辑 - 模式2
+if generate_twist_btn:
+    if not api_key:
+        st.error("请先输入 API Key")
+    elif not story_material:
+        st.error("请输入故事素材")
+    else:
+        with st.spinner("文案生成中..."):
+            try:
+                prompt = get_plot_twist_prompt(story_material, twist_count, duration, requirements)
+                result = call_gemini_api(api_key, prompt)
+
+                # 解析响应
+                content = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                twists = parse_response(content)
+
+                if twists:
+                    st.session_state["twists"] = twists
+                    st.session_state["last_prompt"] = prompt
+                    st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
+                    st.session_state["current_mode"] = "twist"
                 else:
                     st.error("无法解析结果，请重试")
 
@@ -187,10 +278,12 @@ if generate_btn:
                 st.error(f"调用失败: {str(e)}")
 
 # 显示结果
-if "creatives" in st.session_state:
+current_mode = st.session_state.get("current_mode", "dislocation")
+
+if current_mode == "dislocation" and "creatives" in st.session_state:
     has_material = st.session_state.get("has_material", False)
 
-    with col2:
+    with col2_disl:
         st.subheader(f"📋 生成的创意 ({len(st.session_state['creatives'])}条)" + (" - 自由发挥" if not has_material else ""))
 
         for i, creative in enumerate(st.session_state["creatives"]):
@@ -225,6 +318,39 @@ if "creatives" in st.session_state:
                     copy_text = f"""【钩子 - 基于错位】
 画面：{creative.get('hookScene', '')}
 旁白：{creative.get('hookNarration', '')}"""
+
+                st.code(copy_text, language=None)
+
+        # 调试模式
+        with st.expander("🔧 调试信息"):
+            st.text_area("发送的 Prompt", st.session_state.get("last_prompt", ""), height=200)
+            st.text_area("API 原始响应", st.session_state.get("last_response", ""), height=300)
+
+elif current_mode == "twist" and "twists" in st.session_state:
+    with col2_twist:
+        st.subheader(f"📋 生成的文案 ({len(st.session_state['twists'])}条)")
+
+        for i, twist in enumerate(st.session_state["twists"]):
+            with st.expander(f"文案 {i+1}", expanded=True):
+                # 显示标签
+                col_tag1, col_tag2 = st.columns(2)
+                with col_tag1:
+                    st.markdown(f"**🏷️ 冲突角度：** {twist.get('conflict_angle', '')}")
+                with col_tag2:
+                    st.markdown(f"**🔗 关系切面：** {twist.get('relationship', '')}")
+
+                # 文案内容 - 突出显示
+                st.markdown(f"### 📝 {twist.get('copy', '')}")
+
+                # 复制按钮
+                copy_text = f"""【冲突角度】
+{twist.get('conflict_angle', '')}
+
+【关系切面】
+{twist.get('relationship', '')}
+
+【文案】
+{twist.get('copy', '')}"""
 
                 st.code(copy_text, language=None)
 
