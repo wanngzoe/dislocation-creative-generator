@@ -592,29 +592,28 @@ elif current_mode == "twist" and "twists" in st.session_state:
     with col2_twist:
         st.subheader(f"📋 生成的文案 ({len(st.session_state['twists'])}条)")
 
+        # 一键复制全部
+        all_copy = "\n\n".join([
+            f"【{i+1}】{t.get('copy', '')}"
+            for i, t in enumerate(st.session_state["twists"])
+        ])
+        col_btn, _ = st.columns([1, 4])
+        with col_btn:
+            st.download_button("📋 复制全部文案", all_copy, file_name="文案.txt", use_container_width=True)
+
+        # 紧凑网格展示
+        cols = st.columns(2)
         for i, twist in enumerate(st.session_state["twists"]):
-            with st.expander(f"文案 {i+1}", expanded=True):
-                # 显示标签
-                col_tag1, col_tag2 = st.columns(2)
-                with col_tag1:
-                    st.markdown(f"**🏷️ 冲突角度：** {twist.get('conflict_angle', '')}")
-                with col_tag2:
-                    st.markdown(f"**🔗 关系切面：** {twist.get('relationship', '')}")
-
-                # 文案内容 - 突出显示
-                st.markdown(f"### 📝 {twist.get('copy', '')}")
-
-                # 复制按钮
-                copy_text = f"""【冲突角度】
-{twist.get('conflict_angle', '')}
-
-【关系切面】
-{twist.get('relationship', '')}
-
-【文案】
-{twist.get('copy', '')}"""
-
-                st.code(copy_text, language=None)
+            with cols[i % 2]:
+                st.markdown(f"""
+                <div style="padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
+                    <div style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                        <span style="background: #e8f4ff; padding: 2px 8px; border-radius: 4px; margin-right: 5px;">{twist.get('conflict_angle', '')}</span>
+                        <span style="background: #fff3e0; padding: 2px 8px; border-radius: 4px;">{twist.get('relationship', '')}</span>
+                    </div>
+                    <div style="font-size: 15px; font-weight: bold; margin: 8px 0;">{twist.get('copy', '')}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
         # 调试模式
         with st.expander("🔧 调试信息"):
