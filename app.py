@@ -210,7 +210,10 @@ def call_minimax(api_key, prompt):
         "model": "MiniMax-M2.7",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.9,
-        "max_tokens": 4096
+        "max_tokens": 4096,
+        "thinking": {
+            "type": "disabled"
+        }
     }
 
     response = requests.post(url, headers=headers, json=data)
