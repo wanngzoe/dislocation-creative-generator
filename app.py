@@ -211,7 +211,8 @@ def call_minimax(api_key, prompt):
         "model": "MiniMax-2.7",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.9,
-        "max_tokens": 4096
+        "max_tokens": 4096,
+        "stream": False  # 禁用流式输出
     }
 
     response = requests.post(url, headers=headers, json=data)
@@ -219,6 +220,10 @@ def call_minimax(api_key, prompt):
 
     if "error" in result:
         raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
+
+    # 提取响应内容
+    if "choices" in result and len(result["choices"]) > 0:
+        result["content"] = result["choices"][0]["message"]["content"]
 
     return result
 
@@ -279,6 +284,20 @@ def parse_response(response_text):
         except:
             pass
     return None
+
+def extract_content_from_response(model, result):
+    """从不同模型的响应中提取文本内容"""
+    if model == "gemini-2.5-pro":
+        # Gemini 格式
+        return result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+    elif model in ["MiniMax-2.7", "doubao", "qwen"]:
+        # OpenAI-compatible 格式
+        choices = result.get("choices", [])
+        if choices:
+            return choices[0].get("message", {}).get("content", "")
+        return ""
+    else:
+        raise Exception(f"不支持的模型: {model}")
 
 def transcribe_with_assemblyai(audio_data, filename, api_key):
     """使用AssemblyAI转写音视频"""
@@ -474,7 +493,7 @@ if generate_btn:
                 st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
                 # 解析响应
-                content = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                content = extract_content_from_response(selected_model, result)
                 creatives = parse_response(content)
 
                 if creatives:
@@ -504,7 +523,7 @@ if generate_twist_btn:
                 st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
                 # 解析响应
-                content = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                content = extract_content_from_response(selected_model, result)
                 twists = parse_response(content)
 
                 if twists:
