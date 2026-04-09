@@ -54,10 +54,10 @@ MODEL_PRESETS = {
         "api_key_url": "https://www.minimax.chat/"
     },
     "doubao": {
-        "name": "Doubao (豆包)",
-        "api_key_label": "火山引擎 API Key",
-        "api_key_help": "在火山引擎获取",
-        "api_key_url": "https://console.volcengine.com/"
+        "name": "Doubao Seed 2.0 (豆包)",
+        "api_key_label": "火山引擎 ARK API Key",
+        "api_key_help": "在火山引擎 ARK 获取",
+        "api_key_url": "https://console.volcengine.com/ark/region:ark+cn-beijing/apikey"
     },
     "qwen": {
         "name": "Qwen (通义千问)",
@@ -235,13 +235,17 @@ def call_doubao(api_key, prompt):
     }
 
     data = {
-        "model": "doubao-2.5-pro",
+        "model": "doubao-seed-2-0-lite-260215",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.9,
         "max_tokens": 4096
     }
 
     response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code != 200:
+        raise Exception(f"豆包API错误: HTTP {response.status_code} - {response.text}")
+
     result = response.json()
 
     if "error" in result:
