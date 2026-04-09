@@ -306,6 +306,8 @@ if generate_btn:
 
                 prompt = get_prompt(input_data)
                 result = call_gemini_api(api_key, prompt)
+                st.session_state["last_prompt"] = prompt
+                st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
                 # 解析响应
                 content = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
@@ -314,11 +316,11 @@ if generate_btn:
                 if creatives:
                     st.session_state["creatives"] = creatives
                     st.session_state["has_material"] = bool(material)
-                    st.session_state["last_prompt"] = prompt
-                    st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
                     st.session_state["current_mode"] = "dislocation"
                 else:
-                    st.error("无法解析结果，请重试")
+                    st.error("无法解析结果，请查看下方调试信息")
+                    with st.expander("🔧 调试信息（解析失败）"):
+                        st.text_area("API返回内容", content if 'content' in dir() else str(result), height=300)
 
             except Exception as e:
                 st.error(f"调用失败: {str(e)}")
@@ -334,6 +336,8 @@ if generate_twist_btn:
             try:
                 prompt = get_plot_twist_prompt(story_material, twist_count, duration, requirements)
                 result = call_gemini_api(api_key, prompt)
+                st.session_state["last_prompt"] = prompt
+                st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
                 # 解析响应
                 content = result.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
@@ -341,11 +345,11 @@ if generate_twist_btn:
 
                 if twists:
                     st.session_state["twists"] = twists
-                    st.session_state["last_prompt"] = prompt
-                    st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
                     st.session_state["current_mode"] = "twist"
                 else:
-                    st.error("无法解析结果，请重试")
+                    st.error("无法解析结果，请查看下方调试信息")
+                    with st.expander("🔧 调试信息（解析失败）"):
+                        st.text_area("API返回内容", content, height=300)
 
             except Exception as e:
                 st.error(f"调用失败: {str(e)}")
