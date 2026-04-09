@@ -2,6 +2,10 @@ import streamlit as st
 import requests
 import json
 import re
+import os
+import tempfile
+from moviepy.editor import VideoFileClip
+import whisper
 
 # 页面配置
 st.set_page_config(
@@ -133,6 +137,18 @@ def parse_response(response_text):
             pass
     return None
 
+def extract_audio_from_video(video_path, output_path):
+    """从视频中提取音频"""
+    video = VideoFileClip(video_path)
+    video.audio.write_audiofile(output_path, logger=None)
+    video.close()
+
+def transcribe_audio(audio_path, model_size="base"):
+    """使用Whisper转写音频"""
+    model = whisper.load_model(model_size)
+    result = model.transcribe(audio_path, language="zh")
+    return result["text"]
+
 # 标题
 st.title("🎬 错位创意生成器")
 st.markdown("短剧素材创意生成工具 - 为广告优化师打造")
@@ -193,9 +209,47 @@ with tab2:
     with col1_twist:
         st.subheader("📝 故事素材")
 
+        # 视频上传
+        st.markdown("**📹 上传视频（可选）**")
+        video_file = st.file_uploader("支持 MP4/AVI/MOV/MKV 格式", type=["mp4", "avi", "mov", "mkv"], key="video_upload")
+
+        if video_file:
+            with st.spinner("视频处理中..."):
+                # 保存视频到临时文件
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_video:
+                    tmp_video.write(video_file.read())
+                    video_path = tmp_video.name
+
+                # 提取音频
+                audio_path = video_path + '.wav'
+                try:
+                    extract_audio_from_video(video_path, audio_path)
+                    st.success("✅ 音频提取成功")
+
+                    # 转写
+                    with st.spinner("🔄 语音转文字中（首次使用需下载模型，请耐心等待）..."):
+                        transcribed_text = transcribe_audio(audio_path)
+                        st.success("✅ 转写完成")
+
+                        # 将转写内容填入故事素材
+                        st.session_state["transcribed_text"] = transcribed_text
+                except Exception as e:
+                    st.error(f"处理失败: {str(e)}")
+                finally:
+                    # 清理临时文件
+                    if os.path.exists(video_path):
+                        os.remove(video_path)
+                    if os.path.exists(audio_path):
+                        os.remove(audio_path)
+
+        # 显示转写结果
+        if "transcribed_text" in st.session_state and st.session_state["transcribed_text"]:
+            st.text_area("📝 转写结果（可编辑）", st.session_state["transcribed_text"], height=100, key="transcribed_display")
+
         # 故事素材
         story_material = st.text_area("故事素材（人物+关系+极端事件） *",
                                      placeholder="例如：弟弟是公司CEO，哥哥是建筑工人，两人是亲兄弟",
+                                     value=st.session_state.get("transcribed_text", ""),
                                      height=120)
 
         # 生成数量
