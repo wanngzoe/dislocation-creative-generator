@@ -199,8 +199,7 @@ def call_gemini(api_key, prompt):
 
 def call_minimax(api_key, prompt):
     """MiniMax API调用"""
-    # MiniMax使用不同的API格式，需要GroupId和Model
-    url = "https://api.minimax.chat/v1/text/chatcompletion_pro2?GroupId=YOUR_GROUP_ID"
+    url = "https://api.minimax.chat/v1/text/chatcompletion_pro2"
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -212,20 +211,38 @@ def call_minimax(api_key, prompt):
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.9,
         "max_tokens": 4096,
-        "stream": False  # 禁用流式输出
+        "stream": False
     }
 
     response = requests.post(url, headers=headers, json=data)
-    result = response.json()
 
-    if "error" in result:
-        raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
+    if response.status_code != 200:
+        raise Exception(f"MiniMax API错误: HTTP {response.status_code} - {response.text}")
 
-    # 提取响应内容
-    if "choices" in result and len(result["choices"]) > 0:
-        result["content"] = result["choices"][0]["message"]["content"]
+    response_text = response.text
 
-    return result
+    # 检查是否是SSE格式（以"data:"开头）
+    if response_text.strip().startswith("data:"):
+        # 解析SSE格式
+        lines = response_text.strip().split("\n")
+        result_text = ""
+        for line in lines:
+            if line.startswith("data:"):
+                data_str = line[5:].strip()
+                if data_str and data_str != "[DONE]":
+                    try:
+                        data_json = json.loads(data_str)
+                        if "choices" in data_json:
+                            result_text += data_json["choices"][0]["message"]["content"]
+                    except:
+                        pass
+        return {"choices": [{"message": {"content": result_text}}]}
+    else:
+        # 普通JSON格式
+        result = json.loads(response_text)
+        if "error" in result:
+            raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
+        return result
 
 def call_doubao(api_key, prompt):
     """豆包API调用"""
