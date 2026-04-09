@@ -127,17 +127,31 @@ def call_gemini_api(api_key, prompt):
 
     # 检查是否有错误
     if "error" in result:
-        raise Exception(f"API错误: {result['error']['message']}")
+        error_msg = result["error"].get("message", "")
+        if "API_KEY" in error_msg.upper():
+            raise Exception("API Key无效，请检查侧边栏的API Key设置")
+        raise Exception(f"API错误: {error_msg}")
+
+    # 检查安全拦截
+    prompt_feedback = result.get("promptFeedback", {})
+    block_reason = prompt_feedback.get("blockReason", "")
+    if block_reason:
+        if block_reason == "PROHIBITED_CONTENT":
+            raise Exception("⚠️ 内容包含敏感信息被拦截（暴力/血腥/违规内容），请修改故事素材后重试")
+        elif block_reason == "SAFETY":
+            raise Exception("⚠️ 内容触发安全过滤，请修改故事素材后重试")
+        else:
+            raise Exception(f"⚠️ 内容被拦截原因: {block_reason}，请修改故事素材后重试")
 
     # 检查返回内容是否为空
     candidates = result.get("candidates", [])
     if not candidates:
-        raise Exception(f"API返回空结果: {result}")
+        raise Exception("API返回空结果，请重试")
 
     content = candidates[0].get("content", {})
     parts = content.get("parts", [])
     if not parts:
-        raise Exception(f"API返回内容为空: {result}")
+        raise Exception("API返回内容为空，请重试")
 
     return result
 
