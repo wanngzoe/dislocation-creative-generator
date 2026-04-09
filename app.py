@@ -199,7 +199,7 @@ def call_gemini(api_key, prompt):
 
 def call_minimax(api_key, prompt):
     """MiniMax API调用"""
-    url = "https://api.minimax.chat/v1/text/chatcompletion_pro2"
+    url = "https://api.minimaxi.com/v1/text/chatcompletion_v2"
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -207,11 +207,10 @@ def call_minimax(api_key, prompt):
     }
 
     data = {
-        "model": "MiniMax-2.7",
+        "model": "MiniMax-M2.7",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.9,
-        "max_tokens": 4096,
-        "stream": False
+        "max_tokens": 4096
     }
 
     response = requests.post(url, headers=headers, json=data)
@@ -219,30 +218,12 @@ def call_minimax(api_key, prompt):
     if response.status_code != 200:
         raise Exception(f"MiniMax API错误: HTTP {response.status_code} - {response.text}")
 
-    response_text = response.text
+    result = response.json()
 
-    # 检查是否是SSE格式（以"data:"开头）
-    if response_text.strip().startswith("data:"):
-        # 解析SSE格式
-        lines = response_text.strip().split("\n")
-        result_text = ""
-        for line in lines:
-            if line.startswith("data:"):
-                data_str = line[5:].strip()
-                if data_str and data_str != "[DONE]":
-                    try:
-                        data_json = json.loads(data_str)
-                        if "choices" in data_json:
-                            result_text += data_json["choices"][0]["message"]["content"]
-                    except:
-                        pass
-        return {"choices": [{"message": {"content": result_text}}]}
-    else:
-        # 普通JSON格式
-        result = json.loads(response_text)
-        if "error" in result:
-            raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
-        return result
+    if "error" in result:
+        raise Exception(f"API错误: {result['error'].get('message', result['error'])}")
+
+    return result
 
 def call_doubao(api_key, prompt):
     """豆包API调用"""
