@@ -123,7 +123,23 @@ def call_gemini_api(api_key, prompt):
     }
 
     response = requests.post(url, json=data)
-    return response.json()
+    result = response.json()
+
+    # 检查是否有错误
+    if "error" in result:
+        raise Exception(f"API错误: {result['error']['message']}")
+
+    # 检查返回内容是否为空
+    candidates = result.get("candidates", [])
+    if not candidates:
+        raise Exception(f"API返回空结果: {result}")
+
+    content = candidates[0].get("content", {})
+    parts = content.get("parts", [])
+    if not parts:
+        raise Exception(f"API返回内容为空: {result}")
+
+    return result
 
 def parse_response(response_text):
     # 提取JSON数组
