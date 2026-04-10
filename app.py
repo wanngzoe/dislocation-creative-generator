@@ -115,25 +115,29 @@ def get_prompt(input_data):
 
 重要：只输出JSON数组，前面不要有任何文字！"""
 
-def get_plot_twist_prompt(story_material, count, duration, requirements):
-    return f"""根据素材生成短剧文案。
+def get_summary_prompt(subtitle_text):
+    return f"""分析以下短剧字幕，提取故事核心要素，用简洁清晰的语言总结。
 
-## 素材
-{story_material}
+## 原文字幕
+{subtitle_text}
 
-## 要求
-- 生成{count}条
-- 每条时长：{duration}
-- 附加要求：{requirements}
+## 输出要求
+请提取并输出以下信息（严格JSON格式）：
 
-## 创作方法
-1. 从主人公特质出发，创造故事锚点（如：身体符号/物品符号/空间符号）
-2. 识别核心冲突角度（如：至亲背叛/有能力者冷漠/后知后觉/被迫共犯/系统碾压）
-3. 每条从不同关系切面出发，语气统一
+{{
+    "人物": ["人物列表，每个人的简要特征"],
+    "关系": "主要人物关系描述",
+    "核心冲突": "故事的核心矛盾/冲突事件（用一句话概括）",
+    "关键转折": "故事的关键转折点",
+    "情绪基调": "整体情绪基调（如：悲伤、愤怒、讽刺等）",
+    "改编建议": "如果用于广告引流，保留哪些核心要素可以去掉哪些细节"
+}}
 
-## 输出格式（严格JSON）
-[
-  {{
+注意：
+1. 只输出JSON，不要其他内容
+2. 人物关系要清晰（如：父子、兄妹、主仆等）
+3. 核心冲突描述要简洁，30字以内
+4. 改编建议要指出哪些血腥暴力细节可以弱化或去除
     "copy": "文案内容（20-35字，2-3个逗号，结尾5字爆点）",
     "conflict_angle": "冲突角度",
     "relationship": "关系切面"
@@ -431,7 +435,7 @@ with tab2:
     col1_twist, col2_twist = st.columns([1, 1.5])
 
     with col1_twist:
-        st.subheader("📝 故事素材")
+        st.subheader("📝 第一步：输入原文字幕")
 
         # 视频上传
         st.markdown("**📹 上传视频（可选）**")
@@ -449,15 +453,33 @@ with tab2:
                 except Exception as e:
                     st.error(f"处理失败: {str(e)}")
 
-        # 显示转写结果
-        if "transcribed_text" in st.session_state and st.session_state["transcribed_text"]:
-            st.text_area("📝 转写结果（可编辑）", st.session_state["transcribed_text"], height=100, key="transcribed_display")
+        # 原始字幕输入
+        original_text = st.text_area(
+            "📝 原文字幕（支持视频转写或直接粘贴字幕）",
+            placeholder="粘贴视频字幕或转写内容...",
+            value=st.session_state.get("transcribed_text", ""),
+            height=150,
+            key="original_text"
+        )
 
-        # 故事素材
-        story_material = st.text_area("故事素材（人物+关系+极端事件） *",
-                                     placeholder="例如：弟弟是公司CEO，哥哥是建筑工人，两人是亲兄弟",
-                                     value=st.session_state.get("transcribed_text", ""),
-                                     height=120)
+        # 总结按钮
+        summarize_btn = st.button("🔍 总结故事", type="secondary", disabled=not (api_key and original_text), key="summarize_btn")
+
+        # 总结结果展示
+        if "story_summary" in st.session_state and st.session_state["story_summary"]:
+            st.markdown("---")
+            st.subheader("📋 故事总结")
+            summary = st.session_state["story_summary"]
+            summary_display = f"""**人物:** {summary.get('人物', [])}
+**关系:** {summary.get('关系', '')}
+**核心冲突:** {summary.get('核心冲突', '')}
+**关键转折:** {summary.get('关键转折', '')}
+**情绪基调:** {summary.get('情绪基调', '')}
+**改编建议:** {summary.get('改编建议', '')}"""
+            st.markdown(summary_display)
+
+        st.markdown("---")
+        st.subheader("📝 第二步：生成文案")
 
         # 生成数量
         twist_count = st.number_input("生成数量", min_value=1, max_value=20, value=10, key="twist_count")
@@ -470,7 +492,7 @@ with tab2:
                                     placeholder="例如：第一人称、保留主人公等")
 
         # 生成按钮
-        generate_twist_btn = st.button("🚀 生成文案", type="primary", disabled=not api_key, key="generate_btn_2")
+        generate_twist_btn = st.button("🚀 生成文案", type="primary", disabled=not (api_key and "story_summary" in st.session_state), key="generate_btn_2")
 
 # 生成逻辑 - 模式1
 if generate_btn:
@@ -513,15 +535,53 @@ if generate_btn:
             except Exception as e:
                 st.error(f"调用失败: {str(e)}")
 
+# 总结逻辑
+if summarize_btn:
+    if not api_key:
+        st.error("请先输入 API Key")
+    elif not original_text:
+        st.error("请输入原文字幕")
+    else:
+        with st.spinner("故事总结中..."):
+            try:
+                prompt = get_summary_prompt(original_text)
+                result = call_api(selected_model, api_key, prompt)
+                st.session_state["last_prompt"] = prompt
+                st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
+
+                # 解析响应
+                content = extract_content_from_response(selected_model, result)
+                summary = parse_response(content)
+
+                if summary and len(summary) > 0:
+                    st.session_state["story_summary"] = summary[0]
+                    st.session_state["current_mode"] = "twist"
+                    st.success("✅ 总结完成！可进入第二步生成文案")
+                else:
+                    st.error("无法解析总结结果，请查看调试信息")
+                    with st.expander("🔧 调试信息（解析失败）"):
+                        st.text_area("API返回内容", content, height=300)
+
+            except Exception as e:
+                st.error(f"调用失败: {str(e)}")
+
 # 生成逻辑 - 模式2
 if generate_twist_btn:
     if not api_key:
         st.error("请先输入 API Key")
-    elif not story_material:
-        st.error("请输入故事素材")
+    elif "story_summary" not in st.session_state:
+        st.error("请先进行第一步：总结故事")
     else:
         with st.spinner("文案生成中..."):
             try:
+                # 使用总结后的内容生成文案
+                summary = st.session_state["story_summary"]
+                # 构建基于总结的素材描述
+                story_material = f"""人物：{', '.join(summary.get('人物', []))}
+关系：{summary.get('关系', '')}
+核心冲突：{summary.get('核心冲突', '')}
+情绪基调：{summary.get('情绪基调', '')}"""
+
                 prompt = get_plot_twist_prompt(story_material, twist_count, duration, requirements)
                 result = call_api(selected_model, api_key, prompt)
                 st.session_state["last_prompt"] = prompt
