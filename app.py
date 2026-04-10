@@ -126,7 +126,7 @@ def get_summary_prompt(subtitle_text):
     "视角人物": "第一人称视角人物（如：小女孩）",
     "关系网": "人物关系及身份（如：爹-屠夫残忍，娘-被卖受害者，舅舅-冷血见死不救）",
     "核心意象": ["广告文案可直接使用的具体物品/场景词：馒头、镯子、卖身契、饥饿、眼泪等"],
-    "冲突事件": "具体虐心事件（如：饥饿求助被拒、被亲人卖给陌生人、发现亲人罪行）",
+    "核心冲突": "最抓人眼球的核心冲突事件（如：亲人反目、身世揭秘、身份错位等）",
     "情绪关键词": ["可用情绪词：绝望、讽刺、悲凉、愤怒等"],
     "反转线索": "故事最大反转（如：求助者正是伤害她的人）"
 }}
@@ -134,15 +134,10 @@ def get_summary_prompt(subtitle_text):
 ## 提取原则
 1. 只输出JSON
 2. 核心意象要具体名词（如"馒头"而不是"食物"）
-3. 冲突事件要一句话描述具体发生了什么，不描述过程细节
+3. 核心冲突要一句话描述核心冲突，不描述过程细节
 4. 不要包含任何血腥暴力描述
-    "copy": "文案内容（20-35字，2-3个逗号，结尾5字爆点）",
-    "conflict_angle": "冲突角度",
-    "relationship": "关系切面"
-  }}
-]
 
-重要：只输出JSON数组！"""
+重要：只输出JSON，不要任何其他内容！"""
 
 def get_plot_twist_prompt(story_material, count, duration, requirements):
     return f"""根据以下故事要素，写{count}条短视频配音文案。
@@ -162,6 +157,9 @@ def get_plot_twist_prompt(story_material, count, duration, requirements):
 - 包含2-3个逗号
 - 结尾5字要有"爆点"
 - 直接可用，不要解释
+
+## 附加要求
+{requirements}
 
 ## 输出格式（严格JSON）
 [
@@ -498,12 +496,12 @@ with tab2:
             st.markdown("---")
             st.subheader("📋 故事总结")
             summary = st.session_state["story_summary"]
-            summary_display = f"""**人物:** {summary.get('人物', [])}
-**关系:** {summary.get('关系', '')}
+            summary_display = f"""**视角人物:** {summary.get('视角人物', '')}
+**关系网:** {summary.get('关系网', '')}
+**核心意象:** {', '.join(summary.get('核心意象', []))}
 **核心冲突:** {summary.get('核心冲突', '')}
-**关键转折:** {summary.get('关键转折', '')}
-**情绪基调:** {summary.get('情绪基调', '')}
-**改编建议:** {summary.get('改编建议', '')}"""
+**情绪关键词:** {', '.join(summary.get('情绪关键词', []))}
+**反转线索:** {summary.get('反转线索', '')}"""
             st.markdown(summary_display)
 
         st.markdown("---")
@@ -605,10 +603,12 @@ if generate_twist_btn:
                 # 使用总结后的内容生成文案
                 summary = st.session_state["story_summary"]
                 # 构建基于总结的素材描述
-                story_material = f"""人物：{', '.join(summary.get('人物', []))}
-关系：{summary.get('关系', '')}
+                story_material = f"""视角人物：{summary.get('视角人物', '')}
+关系网：{summary.get('关系网', '')}
+核心意象：{', '.join(summary.get('核心意象', []))}
 核心冲突：{summary.get('核心冲突', '')}
-情绪基调：{summary.get('情绪基调', '')}"""
+情绪关键词：{', '.join(summary.get('情绪关键词', []))}
+反转线索：{summary.get('反转线索', '')}"""
 
                 prompt = get_plot_twist_prompt(story_material, twist_count, duration, requirements)
                 result = call_api(selected_model, api_key, prompt)
