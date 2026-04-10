@@ -153,8 +153,7 @@ def get_plot_twist_prompt(story_material, count, duration, requirements):
 
 ## 格式要求
 - 每条{duration}（10秒约20字，30秒约100字，60秒约200字）
-- 根据时长调整字数
-- 包含2-3个逗号
+- 根据时长调整字数和逗号数量（短文案2-3个逗号，长文案可适当增加）
 - 整体文案有冲击力即可，不需要刻意在结尾加"爆点"
 - 直接可用，不要解释
 
