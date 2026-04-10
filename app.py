@@ -152,7 +152,7 @@ def get_plot_twist_prompt(story_material, count, duration, requirements):
 4. **反转冲击**：整体文案有冲击力，能引发情绪共鸣
 
 ## 格式要求
-- 每条{duration}（时长决定字数：10秒约20字，30秒约35字，60秒约60字）
+- 每条{duration}（10秒约20字，30秒约100字，60秒约200字）
 - 根据时长调整字数
 - 包含2-3个逗号
 - 整体文案有冲击力即可，不需要刻意在结尾加"爆点"
