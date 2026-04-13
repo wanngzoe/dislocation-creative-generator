@@ -115,29 +115,51 @@ def get_prompt(input_data):
 
 重要：只输出JSON数组，前面不要有任何文字！"""
 
+def get_direction_prompt(subtitle_text):
+    return f"""分析以下内容，提取用于广告文案创作的方向要素。
+
+## 内容
+{subtitle_text}
+
+## 输出要求（严格JSON数组）
+[{{
+    "核心冲突": "一句话描述最抓人眼球的核心冲突（如：至亲背叛、身份错位、求助者正是伤害她的人）",
+    "意象词": ["广告文案可直接使用的具体物品/场景词，如：馒头、镯子、卖身契、骨头汤等"],
+    "情绪基调": "整体情绪氛围（如：绝望、讽刺、悲凉、愤怒）",
+    "可用要素": "可用于创作的关键元素提取"
+}}]
+
+## 提取原则
+1. 只输出JSON数组
+2. 意象词要具体名词，可用逗号分隔
+3. 核心冲突要一句话描述核心冲突，不描述过程细节
+4. 如有敏感意象，可用标点符号分隔或用近义词替代
+
+重要：只输出JSON数组，不要任何其他内容！"""
+
 def get_summary_prompt(subtitle_text):
     return f"""分析以下短剧字幕，提取可用于广告文案的具体要素。
 
 ## 字幕内容
 {subtitle_text}
 
-## 输出要求（严格JSON）
-{{
+## 输出要求（严格JSON数组）
+[{{
     "视角人物": "第一人称视角人物（如：小女孩）",
     "关系网": "人物关系及身份（如：爹-屠夫残忍，娘-被卖受害者，舅舅-冷血见死不救）",
     "核心意象": ["广告文案可直接使用的具体物品/场景词：馒头、镯子、卖身契、饥饿、眼泪等"],
     "核心冲突": "最抓人眼球的核心冲突事件（如：亲人反目、身世揭秘、身份错位等）",
     "情绪关键词": ["可用情绪词：绝望、讽刺、悲凉、愤怒等"],
     "反转线索": "故事最大反转（如：求助者正是伤害她的人）"
-}}
+}}]
 
 ## 提取原则
-1. 只输出JSON
+1. 只输出JSON数组
 2. 核心意象要具体名词，可用逗号分隔（如：馒头,镯子,骨头汤）
 3. 核心冲突要一句话描述核心冲突，不描述过程细节
 4. 如有敏感意象，可用标点符号分隔或用近义词替代
 
-重要：只输出JSON，不要任何其他内容！"""
+重要：只输出JSON数组，不要任何其他内容！"""
 
 def get_plot_twist_prompt(story_material, count, duration, requirements):
     return f"""根据以下故事要素，写{count}条短视频配音文案。
@@ -145,16 +167,15 @@ def get_plot_twist_prompt(story_material, count, duration, requirements):
 ## 故事要素
 {story_material}
 
+## 核心原则
+**画面感 + 反转冲击力 + 想点击（爽、猎奇、等）**
+
 ## 创作方法
-1. **对比反差**：善恶对比/贫富对比/期望vs现实
-2. **第一人称**：用"我"的视角，带入感强
-3. **具体意象**：用具体物品/场景词增加画面感（如：馒头、镯子、骨头汤）
-4. **反转冲击**：整体文案有冲击力，能引发情绪共鸣
+1. **画面感**：每句话要有极强的画面感和反转冲击力，刀刀致命。直接可用（如：凌晨四点的厨房、婆婆的大脸、500万）
+2. **语气有反差**：根据故事要素中的设定，选取最有冲击或反差的语气叙述（如：小女孩：稚嫩又刺骨，儿媳：淡定又爽感）
 
 ## 格式要求
 - 每条{duration}（10秒约20字，30秒约100字，60秒约200字）
-- 根据时长调整字数和逗号数量（短文案2-3个逗号，长文案可适当增加）
-- 整体文案有冲击力即可，不需要刻意在结尾加"爆点"
 - 直接可用，不要解释
 
 ## 附加要求
@@ -163,7 +184,7 @@ def get_plot_twist_prompt(story_material, count, duration, requirements):
 ## 输出格式（严格JSON）
 [
   {{
-    "copy": "文案（带对比、反转、暗示）",
+    "copy": "文案（画面感+反转+吸引人点击）",
     "conflict_angle": "冲突类型",
     "relationship": "关系视角"
   }}
@@ -315,8 +336,23 @@ def parse_response(response_text):
     if json_match:
         try:
             return json.loads(json_match.group())
-        except:
-            pass
+        except json.JSONDecodeError as e:
+            # 尝试修复不完整的JSON（截断情况）
+            fixed_text = json_match.group()
+            # 找到最后一个完整的对象
+            last_complete_idx = fixed_text.rfind('},')
+            if last_complete_idx != -1:
+                try:
+                    return json.loads(fixed_text[:last_complete_idx + 1] + ']')
+                except:
+                    pass
+            # 尝试补全缺失的引号和括号
+            if not fixed_text.strip().endswith(']'):
+                fixed_text = fixed_text.rstrip(',') + '"]}'
+            try:
+                return json.loads(fixed_text)
+            except:
+                pass
     return None
 
 def extract_content_from_response(model, result):
@@ -460,7 +496,19 @@ with tab2:
     col1_twist, col2_twist = st.columns([1, 1.5])
 
     with col1_twist:
-        st.subheader("📝 第一步：输入原文字幕")
+        st.subheader("📝 输入方向")
+
+        # 方案选择
+        approach_option = st.radio(
+            "选择分析方案",
+            ["方案1：方向提取（推荐）", "方案2：故事总结"],
+            index=0,
+            key="approach_radio",
+            help="方案1侧重提取创作方向要素，方案2侧重完整故事分析"
+        )
+
+        # 保存方案选择到session_state
+        st.session_state["use_direction_approach"] = "方案1" in approach_option
 
         # 视频上传
         st.markdown("**📹 上传视频（可选）**")
@@ -470,30 +518,41 @@ with tab2:
             st.error("请先在侧边栏输入 AssemblyAI API Key")
 
         if video_file and assemblyai_key:
-            with st.spinner("视频上传中..."):
+            with st.spinner("视频转写中..."):
                 try:
                     transcribed_text = transcribe_with_assemblyai(video_file.getvalue(), video_file.name, assemblyai_key)
                     st.success("✅ 转写完成")
                     st.session_state["transcribed_text"] = transcribed_text
                 except Exception as e:
-                    st.error(f"处理失败: {str(e)}")
+                    st.error(f"转写失败: {str(e)}")
 
-        # 原始字幕输入
+        # 原始字幕/方向输入
         original_text = st.text_area(
-            "📝 原文字幕（支持视频转写或直接粘贴字幕）",
-            placeholder="粘贴视频字幕或转写内容...",
+            "📝 原文字幕 / 方向描述",
+            placeholder="方式1：粘贴视频字幕，AI分析提取方向\n方式2：直接输入方向描述（如：婆媳冲突+彩礼+打脸）",
             value=st.session_state.get("transcribed_text", ""),
             height=150,
             key="original_text"
         )
 
-        # 总结按钮
-        summarize_btn = st.button("🔍 总结故事", type="secondary", disabled=not (api_key and original_text), key="summarize_btn")
+        # 分析方向按钮
+        analyze_btn = st.button("🔍 分析方向", type="secondary", disabled=not (api_key and original_text), key="analyze_btn")
+
+        # 方向结果展示
+        if "story_direction" in st.session_state and st.session_state["story_direction"]:
+            st.markdown("---")
+            st.subheader("📋 方案1结果：提取的方向")
+            direction = st.session_state["story_direction"]
+            direction_display = f"""**核心冲突:** {direction.get('核心冲突', '')}
+**意象词:** {direction.get('意象词', '')}
+**情绪基调:** {direction.get('情绪基调', '')}
+**可用要素:** {direction.get('可用要素', '')}"""
+            st.markdown(direction_display)
 
         # 总结结果展示
         if "story_summary" in st.session_state and st.session_state["story_summary"]:
             st.markdown("---")
-            st.subheader("📋 故事总结")
+            st.subheader("📋 方案2结果：故事总结")
             summary = st.session_state["story_summary"]
             summary_display = f"""**视角人物:** {summary.get('视角人物', '')}
 **关系网:** {summary.get('关系网', '')}
@@ -504,20 +563,16 @@ with tab2:
             st.markdown(summary_display)
 
         st.markdown("---")
-        st.subheader("📝 第二步：生成文案")
 
-        # 生成数量
+        # 生成参数
+        st.subheader("🎯 生成设置")
         twist_count = st.number_input("生成数量", min_value=1, max_value=20, value=10, key="twist_count")
-
-        # 时长选择
         duration = st.selectbox("时长", ["10秒", "15秒", "30秒", "60秒"], index=0)
-
-        # 附加要求
         requirements = st.text_input("附加要求（可选）",
                                     placeholder="例如：第一人称、保留主人公等")
 
         # 生成按钮
-        generate_twist_btn = st.button("🚀 生成文案", type="primary", disabled=not (api_key and "story_summary" in st.session_state), key="generate_btn_2")
+        generate_twist_btn = st.button("🚀 生成文案", type="primary", disabled=not (api_key and ("story_direction" in st.session_state or "story_summary" in st.session_state)), key="generate_btn_2")
 
 # 生成逻辑 - 模式1
 if generate_btn:
@@ -560,32 +615,57 @@ if generate_btn:
             except Exception as e:
                 st.error(f"调用失败: {str(e)}")
 
-# 总结逻辑
-if summarize_btn:
+# 分析逻辑
+if analyze_btn:
     if not api_key:
         st.error("请先输入 API Key")
     elif not original_text:
-        st.error("请输入原文字幕")
+        st.error("请输入原文字幕或方向描述")
     else:
-        with st.spinner("故事总结中..."):
+        use_direction = st.session_state.get("use_direction_approach", True)
+        spinner_text = "方向提取中..." if use_direction else "故事总结中..."
+
+        with st.spinner(spinner_text):
             try:
-                prompt = get_summary_prompt(original_text)
-                result = call_api(selected_model, api_key, prompt)
-                st.session_state["last_prompt"] = prompt
-                st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
+                # 根据方案选择不同的prompt
+                if use_direction:
+                    prompt = get_direction_prompt(original_text)
+                    result = call_api(selected_model, api_key, prompt)
+                    st.session_state["last_prompt"] = prompt
+                    st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
 
-                # 解析响应
-                content = extract_content_from_response(selected_model, result)
-                summary = parse_response(content)
+                    # 解析响应
+                    content = extract_content_from_response(selected_model, result)
+                    direction = parse_response(content)
 
-                if summary and len(summary) > 0:
-                    st.session_state["story_summary"] = summary[0]
-                    st.session_state["current_mode"] = "twist"
-                    st.success("✅ 总结完成！可进入第二步生成文案")
+                    if direction and isinstance(direction, list) and len(direction) > 0 and isinstance(direction[0], dict):
+                        st.session_state["story_direction"] = direction[0]
+                        st.session_state["current_mode"] = "twist"
+                        st.success("✅ 方向提取完成！可生成文案")
+                        st.rerun()
+                    else:
+                        st.error("无法解析方向结果，请查看调试信息")
+                        with st.expander("🔧 调试信息（解析失败）"):
+                            st.text_area("API返回内容", content if content else str(result), height=300)
                 else:
-                    st.error("无法解析总结结果，请查看调试信息")
-                    with st.expander("🔧 调试信息（解析失败）"):
-                        st.text_area("API返回内容", content, height=300)
+                    prompt = get_summary_prompt(original_text)
+                    result = call_api(selected_model, api_key, prompt)
+                    st.session_state["last_prompt"] = prompt
+                    st.session_state["last_response"] = json.dumps(result, indent=2, ensure_ascii=False)
+
+                    # 解析响应
+                    content = extract_content_from_response(selected_model, result)
+                    summary = parse_response(content)
+
+                    if summary and isinstance(summary, list) and len(summary) > 0 and isinstance(summary[0], dict):
+                        st.session_state["story_summary"] = summary[0]
+                        st.session_state["current_mode"] = "twist"
+                        st.success("✅ 故事总结完成！可生成文案")
+                        st.rerun()
+                    else:
+                        st.error("无法解析总结结果，请查看调试信息")
+                        with st.expander("🔧 调试信息（解析失败）"):
+                            st.text_area("API返回内容", content if content else str(result), height=300)
 
             except Exception as e:
                 st.error(f"调用失败: {str(e)}")
@@ -594,15 +674,23 @@ if summarize_btn:
 if generate_twist_btn:
     if not api_key:
         st.error("请先输入 API Key")
-    elif "story_summary" not in st.session_state:
-        st.error("请先进行第一步：总结故事")
+    elif "story_direction" not in st.session_state and "story_summary" not in st.session_state:
+        st.error("请先进行第一步：分析方向或总结故事")
     else:
         with st.spinner("文案生成中..."):
             try:
-                # 使用总结后的内容生成文案
-                summary = st.session_state["story_summary"]
-                # 构建基于总结的素材描述
-                story_material = f"""视角人物：{summary.get('视角人物', '')}
+                use_direction = st.session_state.get("use_direction_approach", True)
+
+                # 根据方案选择构建不同的素材描述
+                if use_direction:
+                    direction = st.session_state.get("story_direction", {})
+                    story_material = f"""核心冲突：{direction.get('核心冲突', '')}
+意象词：{direction.get('意象词', '')}
+情绪基调：{direction.get('情绪基调', '')}
+可用要素：{direction.get('可用要素', '')}"""
+                else:
+                    summary = st.session_state.get("story_summary", {})
+                    story_material = f"""视角人物：{summary.get('视角人物', '')}
 关系网：{summary.get('关系网', '')}
 核心意象：{', '.join(summary.get('核心意象', []))}
 核心冲突：{summary.get('核心冲突', '')}
@@ -704,6 +792,10 @@ elif current_mode == "twist" and "twists" in st.session_state:
                     <div style="font-size: 15px; font-weight: bold; margin: 8px 0;">{twist.get('copy', '')}</div>
                 </div>
                 """, unsafe_allow_html=True)
+
+                # 单条复制按钮
+                copy_text = twist.get('copy', '')
+                st.download_button(f"📋 复制", copy_text, file_name=f"文案_{i+1}.txt", key=f"copy_btn_{i}", use_container_width=True)
 
         # 调试模式
         with st.expander("🔧 调试信息"):
